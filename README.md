@@ -1,8 +1,8 @@
 # DeepLearningAndMachinLearning-Collection
 A collection of all implemented papers in Deep Learning and Machine Learning field implemented by me. All models have been sanity checked on a small batch so they should be good to go!
 
-ResNet: https://github.com/PeymanTahghighi/DeepLearningAndMachinLearning-Collection/tree/main/ResNet
+1. [ResNet](https://github.com/PeymanTahghighi/DeepLearningAndMachinLearning-Collection/tree/main/ResNet): https://arxiv.org/abs/1512.03385
 
-MobileNet: https://github.com/PeymanTahghighi/DeepLearningAndMachinLearning-Collection/tree/main/MobileNet
+2. [MobileNet](https://github.com/PeymanTahghighi/DeepLearningAndMachinLearning-Collection/tree/main/MobileNet): https://arxiv.org/abs/1704.04861
 
-MobileNetV2: https://github.com/PeymanTahghighi/DeepLearningAndMachinLearning-Collection/tree/main/MobileNetV2
+3. [MobileNetV2](https://github.com/PeymanTahghighi/DeepLearningAndMachinLearning-Collection/tree/main/MobileNetV2): https://arxiv.org/abs/1801.04381
