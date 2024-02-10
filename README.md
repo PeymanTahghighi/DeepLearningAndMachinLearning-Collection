@@ -19,7 +19,7 @@ A collection of implementations in Deep Learning and Machine Learning by me. All
 
 9. [Vision Transformers (ViT)](https://arxiv.org/abs/2010.11929) https://arxiv.org/abs/2010.11929
 
-10. [VQVAE] (https://arxiv.org/pdf/1711.00937.pdf) https://arxiv.org/pdf/1711.00937.pdf
+10. [VQVAE](https://arxiv.org/abs/1711.00937) https://arxiv.org/pdf/1711.00937.pdf
    
 
 
