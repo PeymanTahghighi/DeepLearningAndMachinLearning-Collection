@@ -6,11 +6,12 @@ import numpy as np
 
 block_size = 64;
 batch_size = 32;
-n_embed = 256;
-max_iters = 5000;
+embed_size = 256;
+max_iters = 10000;
 learning_rate = 1e-4;
 n_layers = 6;
 n_head = 8;
+
 
 with open('input.txt', 'r', encoding='utf-8') as f:
     text = f.read();
@@ -39,17 +40,20 @@ def get_batch(split):
 class Head(nn.Module):
     def __init__(self, head_size) -> None:
         super().__init__();
-        self.key = nn.Linear(n_embed, head_size, bias = False);
-        self.query = nn.Linear(n_embed, head_size, bias = False);
-        self.value = nn.Linear(n_embed, head_size, bias = False);
+        self.key = nn.Linear(embed_size, head_size, bias = False);
+        self.query = nn.Linear(embed_size, head_size, bias = False);
+        self.value = nn.Linear(embed_size, head_size, bias = False);
         self.register_buffer('tril', torch.tril(torch.ones(block_size, block_size)));
 
     def forward(self, x):
+        #(batch_size, block_size, embed_dim)
         B,T,C = x.shape;
-        k = self.key(x);
-        q = self.query(x);
+        k = self.key(x);#(batch_size, block_size, head_size)
+        q = self.query(x);#(batch_size, block_size, head_size)
         scale = (k@q.transpose(-2,-1))*C**-0.5;
+
         scale = scale.masked_fill(self.tril[:T,:T] == 0, (float('-inf'))); #make a decoder block
+        
         scale = F.softmax(scale, dim=-1);
         v = self.value(x);
         out = scale @ v;
@@ -60,56 +64,59 @@ class MultiheadAttention(nn.Module):
         super().__init__();
 
         self.heads = nn.ModuleList([Head(head_size) for _ in range(num_heads)]);
-        self.proj = nn.Linear(n_embed, n_embed);
+        self.proj = nn.Linear(embed_size, embed_size);
     def forward(self, x):
+        #(batch_size, block_size, embed_dim)
         out = torch.cat([h(x) for h in self.heads], dim=-1);
         out = self.proj(out);
         return out;
 
 class FeedForward(nn.Module):
-    def __init__(self, n_embed):
+    def __init__(self, embed_size):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(n_embed, n_embed*4),
+            nn.Linear(embed_size, embed_size*4),
             nn.ReLU(),
-            nn.Linear(n_embed*4, n_embed),
+            nn.Linear(embed_size*4, embed_size),
         )
     
     def forward(self, x):
         return self.net(x);
 
 class Block(nn.Module):
-    def __init__(self, n_embed, n_head) -> None:
+    def __init__(self, embed_size, n_head) -> None:
         super().__init__()
-        head_size = n_embed // n_head;
+        head_size = embed_size // n_head;
         self.sa = MultiheadAttention(n_head, head_size);
-        self.ffwd = FeedForward(n_embed);
-        self.ln1 = nn.LayerNorm(n_embed);
-        self.ln2 = nn.LayerNorm(n_embed);
+        self.ffwd = FeedForward(embed_size);
+        self.ln1 = nn.LayerNorm(embed_size);
+        self.ln2 = nn.LayerNorm(embed_size);
     def forward(self, x):
+        #(batch_size, block_size, embed_size)
         x = self.ln1(x);
         x = x + self.sa(x);
         x = x + self.ffwd(self.ln2(x));
         return x;
  
-class BigramLM(nn.Module):
+class NanoGPT(nn.Module):
     def __init__(self, vocab_size) -> None:
         super().__init__();
-        self.embedding = nn.Embedding(vocab_size, n_embed);
-        self.position_embedding_table = nn.Embedding(block_size,n_embed);
-        self.lm_head = nn.Linear(n_embed, vocab_size);
-        self.blocks = nn.Sequential(*[Block(n_embed, n_head=n_head) for _ in range(n_layers)])
-        self.ln = nn.LayerNorm(n_embed)
+        self.embedding = nn.Embedding(vocab_size, embed_size);
+        self.position_embedding_table = nn.Embedding(block_size,embed_size);
+        self.lm_head = nn.Linear(embed_size, vocab_size);
+        self.blocks = nn.Sequential(*[Block(embed_size, n_head=n_head) for _ in range(n_layers)])
+        self.ln = nn.LayerNorm(embed_size)
 
 
     def forward(self, idx, targets=None):
+        #input (batch_size, block_size)
         B,T = idx.shape;
-        tok_embedding = self.embedding(idx);
-        pos_embed = self.position_embedding_table(torch.arange(T).to('cuda'))
+        tok_embedding = self.embedding(idx); #(batch_size, embed_size)
+        pos_embed = self.position_embedding_table(torch.arange(T).to('cuda')) #(batch_size, embed_size)
         x = tok_embedding + pos_embed;
         x = self.blocks(x);
         x = self.ln(x);
-        logits = self.lm_head(x);
+        logits = self.lm_head(x);#for each token, what goes next
         if targets is not None:
             loss = F.cross_entropy(logits.permute(0,2,1), targets)
             return logits, loss;
@@ -119,19 +126,13 @@ class BigramLM(nn.Module):
         for _ in range(new_tokens):
             idx_cond = idx[:, -block_size:];
             logits = self(idx_cond);
-            logits = logits[:,-1,:];
+            logits = logits[:,-1,:];#take last word
             probs = F.softmax(logits, dim = 1);
             id_next = torch.multinomial(probs, num_samples=1);
             idx = torch.cat((idx, id_next), dim=1);
         return idx;
 
-B,T,C = 4,8,32
-head_size = 16;
-key = nn.Linear(C,head_size,bias=False);
-query = nn.Linear(C,head_size,bias=False);
-
-
-net = BigramLM(vocab_size).to('cuda');
+net = NanoGPT(vocab_size).to('cuda');
 optimzer = optim.AdamW(net.parameters(), lr = learning_rate);
 
 for step in range(max_iters):
@@ -143,5 +144,5 @@ for step in range(max_iters):
     net.zero_grad(set_to_none=True);
     print(loss.item());
 
-out = net.generate(torch.zeros((1,1), dtype=torch.long).to('cuda'),500)[0].tolist();
+out = net.generate(torch.zeros((1,1), dtype=torch.long).to('cuda'), 500)[0].tolist();
 print(decode(out));
