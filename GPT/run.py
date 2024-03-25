@@ -3,13 +3,14 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
+from tqdm import tqdm
 
 block_size = 64;
 batch_size = 32;
 embed_size = 256;
 max_iters = 10000;
 learning_rate = 1e-4;
-n_layers = 6;
+n_layers = 12;
 n_head = 8;
 
 
@@ -132,17 +133,30 @@ class NanoGPT(nn.Module):
             idx = torch.cat((idx, id_next), dim=1);
         return idx;
 
-net = NanoGPT(vocab_size).to('cuda');
-optimzer = optim.AdamW(net.parameters(), lr = learning_rate);
+def train(net, optimizer):
+    for step in tqdm(range(max_iters)):
+        xb, yb = get_batch('train');
+        xb, yb = xb.to('cuda'), yb.to('cuda');
+        logits, loss = net(xb,yb);
+        loss.backward();
+        optimzer.step();
+        net.zero_grad(set_to_none=True);
+        print(loss.item());
 
-for step in range(max_iters):
-    xb, yb = get_batch('train');
-    xb, yb = xb.to('cuda'), yb.to('cuda');
-    logits, loss = net(xb,yb);
-    loss.backward();
-    optimzer.step();
-    net.zero_grad(set_to_none=True);
-    print(loss.item());
+    torch.save(net.state_dict(), 'model.pt');
 
-out = net.generate(torch.zeros((1,1), dtype=torch.long).to('cuda'), 500)[0].tolist();
-print(decode(out));
+def test(net):
+    ckpt = torch.load('model.pt');
+    net.load_state_dict(ckpt);
+    with torch.no_grad():
+        net.eval();
+        out = net.generate(torch.zeros((1,1), dtype=torch.long).to('cuda'), 500)[0].tolist();
+        print(decode(out));
+
+if __name__ == "__main__":
+    net = NanoGPT(vocab_size).to('cuda');
+    optimzer = optim.AdamW(net.parameters(), lr = learning_rate);
+    train(net, optimzer);
+    test(net);
+    
+    
