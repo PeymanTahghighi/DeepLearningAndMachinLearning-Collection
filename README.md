@@ -23,7 +23,7 @@ A collection of implementations in Deep Learning and Machine Learning by me. All
 
 11. [Denoising Diffusion Probabilistic Models](https://arxiv.org/abs/2006.11239) adopted from [this github repository](https://github.com/hkproj/pytorch-stable-diffusion/blob/main/sd/ddpm.py)
 
-12. [DINO V1] (https://github.com/facebookresearch/dino)
+12. [DINO V1](https://github.com/facebookresearch/dino)
 
 
   
