@@ -25,5 +25,6 @@ A collection of implementations in Deep Learning and Machine Learning by me. All
 
 12. [DINO V1](https://github.com/facebookresearch/dino)
 
+13. LLaMA [https://llama.meta.com/] borrowed from [here](https://github.com/hkproj/pytorch-llama/blob/main/download.sh)
 
   
