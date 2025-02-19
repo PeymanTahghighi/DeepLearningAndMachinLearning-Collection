@@ -27,4 +27,5 @@ A collection of implementations in Deep Learning and Machine Learning by me. All
 
 13. [LLaMA](https://llama.meta.com/) borrowed from [here](https://github.com/hkproj/pytorch-llama/blob/main/download.sh)
 
+14. [DETR](https://arxiv.org/abs/2005.12872) adopted from huggingface implementations
   
