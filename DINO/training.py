@@ -2,7 +2,6 @@ import argparse
 import json
 import pathlib
 
-
 import torch
 import torchvision.transforms as transforms
 import tqdm
@@ -11,7 +10,9 @@ from torch.utils.tensorboard import SummaryWriter
 from torchvision.datasets import ImageFolder
 
 from evaluation import compute_embedding, compute_knn
-from utils import DataAugmetation, Head, Loss, MultiCropWrapper, clip_gradient
+from utils import (
+    DataAugmetation, Head, Loss, MultiCropWrapper, clip_gradient
+)
 from vision_transformer import vit_small, DINOHead
 
 
@@ -41,7 +42,6 @@ def main():
     args = parser.parse_args()
     print(vars(args))
 
-    
     vit_name, dim = "deit_small_patch16_224", 384
     path_dataset_train = pathlib.Path("../datasets/imagenette2/imagenette2/train")
     path_dataset_val = pathlib.Path("../datasets/imagenette2/imagenette2/val")
@@ -56,13 +56,11 @@ def main():
         label_mapping = json.load(f)
 
     transform_aug = DataAugmetation(size=224, n_local_crops=args.n_crops - 2)
-    transform_plain = transforms.Compose(
-        [
-            transforms.ToTensor(),
-            transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-            transforms.Resize((224, 224)),
-        ]
-    )
+    transform_plain = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+        transforms.Resize((224, 224)),
+    ])
 
     dataset_train_aug = ImageFolder(path_dataset_train, transform=transform_aug)
     dataset_train_plain = ImageFolder(path_dataset_train, transform=transform_plain)
@@ -104,11 +102,8 @@ def main():
     writer.add_text("arguments", json.dumps(vars(args)))
 
     # Neural network related
-    student_vit = vit_small();
-    
-    
-        
-    teacher_vit = vit_small();
+    student_vit = vit_small()
+    teacher_vit = vit_small()
 
     student = MultiCropWrapper(
         student_vit,
@@ -121,15 +116,7 @@ def main():
     teacher = MultiCropWrapper(teacher_vit, DINOHead(dim, args.out_dim))
     student, teacher = student.to(device), teacher.to(device)
 
-    ckpt = torch.load('dino_deitsmall16_pretrain_full_checkpoint.pth');
-    
-    # ckpt_rename = dict();
-    # for k in ckpt['student'].keys():
-    #     if 'last_layer' in k:
-    #         continue;
-    #     ckpt_rename[k[k.find('.')+1:]] = ckpt['student'][k];
-    # student.load_state_dict(ckpt_rename, strict=False);
-
+    ckpt = torch.load("dino_deitsmall16_pretrain_full_checkpoint.pth")
     teacher.load_state_dict(student.state_dict())
 
     for p in teacher.parameters():
@@ -187,10 +174,8 @@ def main():
                 student.train()
 
             images = [img.to(device) for img in images]
-
             teacher_output = teacher(images[:2])
             student_output = student(images)
-
             loss = loss_inst(student_output, teacher_output)
 
             optimizer.zero_grad()
@@ -203,12 +188,9 @@ def main():
                     student.parameters(), teacher.parameters()
                 ):
                     teacher_ps.data.mul_(args.momentum_teacher)
-                    teacher_ps.data.add_(
-                        (1 - args.momentum_teacher) * student_ps.detach().data
-                    )
+                    teacher_ps.data.add_((1 - args.momentum_teacher) * student_ps.detach().data)
 
             writer.add_scalar("train_loss", loss, n_steps)
-
             n_steps += 1
 
 
